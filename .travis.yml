@@ -1,0 +1,12 @@
+language: python
+python:
+  - "3.6"
+script:
+  - python --version
+deploy:
+  provider: pages
+  skip-cleanup: true
+  github-token: $GITHUB_TOKEN
+  on:
+    branch: master
+  fqdn: pdf.tsing.net
