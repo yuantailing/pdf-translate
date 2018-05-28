@@ -2,14 +2,12 @@ language: python
 python:
   - "3.6"
 script:
-  - python build.py
-after_success:
-  - cp -r www docs
+  - ./build.sh
 deploy:
   provider: pages
   skip-cleanup: true
   github-token: $GITHUB_TOKEN
   on:
     branch: master
-  local-dir: docs
+  local-dir: build
   fqdn: pdf.tsing.net

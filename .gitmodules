@@ -1,0 +1,4 @@
+[submodule "pdf.js"]
+	path = pdf.js
+	url = https://github.com/yuantailing/pdf.js.git
+	branch = translate
