@@ -5,7 +5,7 @@ sudo: false
 cache:
   directories:
   - pdf.js/node_modules
-before_script:
+install:
   - npm install -g gulp-cli
   - pushd . && cd pdf.js
   - npm install
