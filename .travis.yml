@@ -7,6 +7,7 @@ cache:
   - pdf.js/node_modules
 install:
   - npm install -g gulp-cli
+  - pip install -r requirements.txt
   - pushd . && cd pdf.js
   - npm install
   - gulp generic

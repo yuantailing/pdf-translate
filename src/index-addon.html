@@ -1,3 +1,222 @@
-<div id="app" style="position: absolute; top: 50px; left: 10px; padding: 3px; background-color: #eee;">
+<div id="app">
 	<div>Dictionary</div>
+	<table>
+		<tbody>
+			<tr v-for="(word, index) in dictionary">
+				<td><input style="width: 80px;" type="text" v-model="dictionary[index][0]"/></td>
+				<td><input style="width: 70px;" type="text" v-model="dictionary[index][1]"/></td>
+				<td><button style="width: 25px;" @click="removeAWord(dictionary[index][0])">x</button></td>
+			</tr>
+		</tbody>
+	</table>
+	<button style="width: 35px;" @click="addAWord('')">+</button>
 </div>
+<script src="static/js/jquery.js"></script>
+<script src="static/js/vue.js"></script>
+<script>
+'use strict';
+
+var seperators = ' ,.?()[]=+-'.split('');
+
+var app = new Vue({
+	el: '#app',
+	data: function () {
+		var version = '0.1.0';
+		var dict_str = window.localStorage.getItem('pdf-translate');
+		var dictionary = undefined;
+		if (dict_str) {
+			try {
+				var version_stored;
+				var obj = JSON.parse(dict_str);
+				version_stored = obj.version;
+				if (version_stored == version)
+					dictionary = obj.dictionary;
+			} catch (e) { }
+		}
+		if (!dictionary || dictionary.length == 0)
+			dictionary = [['', '']];
+		return {
+			version: version,
+			dictionary: dictionary,
+		};
+	},
+	computed: {
+		words: function () {
+			return this.dictionary.map(t => t[0]);
+		},
+	},
+	methods: {
+		addAWord: function (word) {
+			for (var i = this.dictionary.length - 1; i >= 0; i--)
+				if (this.dictionary[i][0] || this.dictionary[i][1])
+					break;
+			this.dictionary.splice(i + 1, 0, [word, word]);
+		},
+		removeAWord: function (word) {
+			this.dictionary.splice(this.words.indexOf(word), 1);
+		},
+		getAllWords: function (line) {
+			var lineLower = line.toLowerCase();
+			var words = [];
+			var pos = 0;
+			while (pos >= 0) {
+				var minpos = -1;
+				var minword;
+				var mintrans;
+				this.dictionary.forEach(([word, translated]) => {
+					if (0 == translated.length)
+						translated = word;
+					var thispos = lineLower.indexOf(word.toLowerCase(), pos);
+					if (word.length <= 1)
+						return;
+					if (thispos >= 0 && (minpos == -1 || thispos < minpos)) {
+						if ((thispos == 0 || -1 != seperators.indexOf(line[thispos - 1])) &&
+							(thispos + word.length == line.length || -1 != seperators.indexOf(line[thispos + word.length]))) {
+							minpos = thispos;
+							minword = line.slice(thispos, thispos + word.length);
+							mintrans = translated;
+						}
+					}
+				});
+				if (minpos >= 0) {
+					words.push({
+						pos: minpos,
+						word: minword,
+						translated: mintrans,
+					});
+					pos = minpos + minword.length;
+				} else {
+					pos = -1;
+				}
+			}
+			return words;
+		}
+	},
+	watch: {
+		dictionary: function () {
+			window.localStorage.setItem('pdf-translate', JSON.stringify({
+				version: this.version,
+				dictionary: this.dictionary,
+			}));
+			translateRefreshAll();
+		},
+	},
+});
+
+$('#viewerContainer').keypress(function(e) {
+	var eCode = e.keyCode ? e.keyCode : e.which ? e.which : e.charCode;
+	if (eCode == 13) {
+		translateSelection();
+	}
+});
+
+function translateSelection() {
+	var sel = window.getSelection();
+	var rng = sel.getRangeAt(0);
+	if (rng.startContainer != rng.endContainer)
+		return;
+	var lo = rng.startOffset;
+	while (lo > 0 && -1 == seperators.indexOf(rng.startContainer.data[lo]) && -1 == seperators.indexOf(rng.startContainer.data[lo - 1]))
+		lo--;
+	while (lo < rng.startContainer.data.length - 1 && -1 != seperators.indexOf(rng.startContainer.data[lo]))
+		lo++;
+	var hi = lo + 1;
+	while (hi < rng.startContainer.data.length && -1 == seperators.indexOf(rng.startContainer.data[hi]))
+		hi++;
+	var word = rng.startContainer.data.slice(lo, hi);
+	if (-1 == app.words.indexOf(word)) {
+		app.addAWord(word);
+	}
+}
+
+function translateRefreshAll() {
+	$('.textLayer').each((_, textLayer) => translateTextLayer(textLayer));
+}
+
+function translateTextLayer(textLayer) {
+	var transLayer = textLayer.previousSibling;
+	if (transLayer.className != 'transLayer') {
+		transLayer = document.createElement('div');
+		transLayer.className = 'transLayer';
+		textLayer.parentNode.insertBefore(transLayer, textLayer);
+	} else {
+		$(transLayer).empty();
+	}
+	$(textLayer).children().each(function(_, divSrc) {
+		var textSrc = divSrc.textContent;
+		var toHide = [];
+		app.getAllWords(textSrc).forEach(({pos, word, translated}) => {
+			var divDst = divSrc.cloneNode();
+			var span1 = document.createElement('span');
+			var span2 = document.createElement('span');
+			var span3 = document.createElement('span');
+			var span4 = document.createElement('span');
+			span1.style.color = 'transparent';
+			span1.textContent = textSrc.slice(0, pos);
+			span3.style.position = 'absolute';
+			span3.style.color = 'transparent';
+			span3.style['background-color'] = 'white';
+			span3.textContent = word;
+			span4.style.position = 'absolute';
+			span4.textContent = translated;
+			span2.appendChild(span3);
+			span2.appendChild(span4);
+			divDst.appendChild(span1);
+			divDst.appendChild(span2);
+			transLayer.appendChild(divDst);
+			toHide.push(divDst);
+		});
+		if (toHide) {
+			$(divSrc).hover(function() {
+				toHide.forEach(divDst => divDst.style.display = 'none');
+			}, function() {
+				toHide.forEach(divDst => divDst.style.display = 'block');
+			});
+		}
+	});
+}
+
+// TODO: 监听 drop
+</script>
+<style>
+.transLayer {
+    position: absolute;
+    left: 0;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    overflow: hidden;
+    # opacity: 0.2;
+    line-height: 1.0;
+}
+
+.transLayer > div {
+	# color: transparent;
+	position: absolute;
+	white-space: pre;
+	cursor: text;
+	-webkit-transform-origin: 0% 0%;
+	transform-origin: 0% 0%;
+}
+
+#app {
+	position: absolute;
+	top: 50px;
+	left: 10px;
+	padding: 3px;
+	max-height: 60px;
+	overflow-y: auto;
+	font-size: 80%;
+	background-color: #eee;
+	opacity: 0.4;
+}
+
+#app:hover {
+	max-height: 80%;
+	opacity: 1.0;
+}
+
+#app input, #app button {
+	font-size: 80%;
+}
+</style>
