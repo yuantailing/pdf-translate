@@ -6,7 +6,8 @@
 				<td><input style="width: 80px;" type="text" v-model="dictionary[index][0]"/></td>
 				<td><input style="width: 70px;" type="text" v-model="dictionary[index][1]"/></td>
 				<td><button v-if="word.trim().length > 1" style="cursor: pointer;" @click="refreshWord(word)">🔄</button></td>
-				<td><button style="width: 20px;" @click="removeWord(word)">x</button></td>
+				<td><a :href="getDictLink(word)" target="_blank"><button v-if="word.trim().length > 1" style="cursor: pointer; padding-left: 1px; padding-right: 1px;">查</button></a></td>
+				<td><button style="width: 15px;" @click="removeWord(word)">x</button></td>
 			</tr>
 		</tbody>
 	</table>
@@ -18,7 +19,7 @@
 <script>
 'use strict';
 
-var seperators = ' ,.?()[]=+-_:"\'/\\#&*@!`'.split('');
+var seperators = ' ,.?()[]=+-_:"\'“”/\\#&*@!`'.split('');
 
 var app = new Vue({
 	el: '#app',
@@ -153,7 +154,10 @@ var app = new Vue({
 					},
 				});
 			}
-		}
+		},
+		getDictLink: (word) => {
+			return 'http://dict.youdao.com/w/' + word.trim();
+		},
 	},
 	watch: {
 		dictionary: function () {
