@@ -1,4 +1,4 @@
-# pdf.tsing.net [developing]
+# pdf-translate [developing]
 
 [![Build Status](https://travis-ci.com/yuantailing/pdf-translate.svg?branch=master)](https://travis-ci.com/yuantailing/pdf-translate)
 
