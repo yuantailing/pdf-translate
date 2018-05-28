@@ -3,7 +3,7 @@ set -e -x
 
 # copy needed files from pdf.js
 mkdir -p build/pdf.js
-cp -r pdf.js/build/generic/* build/pdf.js/
+cp -r pdf.js/build/minified/* build/pdf.js/
 
 # copy assets
 cp -r www/* build/
@@ -11,9 +11,9 @@ cp -r www/* build/
 # download required JS
 mkdir -p build/static/js
 pushd . && cd build/static/js
-curl -sSL https://unpkg.com/jquery/dist/jquery.js -ojquery.js
+curl -sSL https://unpkg.com/jquery/dist/jquery.min.js -ojquery.min.js
 curl -sSL https://unpkg.com/jquery.md5/index.js -ojquery.md5.js
-curl -sSL https://unpkg.com/vue/dist/vue.js -ovue.js
+curl -sSL https://unpkg.com/vue/dist/vue.min.js -ovue.min.js
 popd
 
 # download welcome PDF
