@@ -12,11 +12,12 @@
 	<button style="width: 35px;" @click="addAWord('')">+</button>
 </div>
 <script src="static/js/jquery.js"></script>
+<script src="static/js/jquery.md5.js"></script>
 <script src="static/js/vue.js"></script>
 <script>
 'use strict';
 
-var seperators = ' ,.?()[]=+-'.split('');
+var seperators = ' ,.?()[]=+-_:"\'/\\#&*@!`'.split('');
 
 var app = new Vue({
 	el: '#app',
@@ -47,10 +48,45 @@ var app = new Vue({
 	},
 	methods: {
 		addAWord: function (word) {
+			word = word.trim();
 			for (var i = this.dictionary.length - 1; i >= 0; i--)
 				if (this.dictionary[i][0] || this.dictionary[i][1])
 					break;
 			this.dictionary.splice(i + 1, 0, [word, word]);
+			if (word.length > 1 && word.length < 25) {
+				var self = this;
+				var appKey = '65eccc07a70b3f1f';
+				var key = 'KQXhVNw0S39r3EIqAjdKA9XDsbHknyhA';
+				var salt = (new Date).getTime();
+				var query = word;
+				var from = '';
+				var to = 'zh-CHS';
+				var str1 = appKey + query + salt +key;
+				var sign = $.md5(str1);
+				$.ajax({
+					url: 'http://openapi.youdao.com/api',
+					type: 'post',
+					dataType: 'jsonp',
+					data: {
+						q: query,
+						appKey: appKey,
+						salt: salt,
+						from: from,
+						to: to,
+						sign: sign,
+					},
+					success: data => {
+						var translation = data.translation[0];
+						console.log(word, translation);
+						var ind = self.words.indexOf(word);
+						console.log(ind);
+						if (ind >= 0 && translation.length > 0) {
+							Vue.set(self.dictionary[ind], 1, translation);
+							console.log(self.dictionary);
+						}
+					},
+				});
+			}
 		},
 		removeAWord: function (word) {
 			this.dictionary.splice(this.words.indexOf(word), 1);
@@ -112,8 +148,10 @@ $('#viewerContainer').keypress(function(e) {
 
 function translateSelection() {
 	var sel = window.getSelection();
+	if (sel.rangeCount == 0)
+		return;
 	var rng = sel.getRangeAt(0);
-	if (rng.startContainer != rng.endContainer)
+	if (rng.startContainer != rng.endContainer && rng.startContainer.parentNode.nextSibling != rng.endContainer.parentNode)
 		return;
 	var lo = rng.startOffset;
 	while (lo > 0 && -1 == seperators.indexOf(rng.startContainer.data[lo]) && -1 == seperators.indexOf(rng.startContainer.data[lo - 1]))
@@ -208,7 +246,7 @@ function translateTextLayer(textLayer) {
 	overflow-y: auto;
 	font-size: 80%;
 	background-color: #eee;
-	opacity: 0.4;
+	# opacity: 0.5;
 }
 
 #app:hover {

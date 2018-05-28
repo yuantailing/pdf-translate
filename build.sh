@@ -12,6 +12,7 @@ cp -r www/* build/
 mkdir -p build/static/js
 pushd . && cd build/static/js
 curl -sSL https://unpkg.com/jquery/dist/jquery.js -ojquery.js
+curl -sSL https://unpkg.com/jquery.md5/index.js -ojquery.md5.js
 curl -sSL https://unpkg.com/vue/dist/vue.js -ovue.js
 popd
 
