@@ -1,13 +1,6 @@
 #!/bin/bash
 set -e -x
 
-# build pdf.js
-pushd .
-cd pdf.js
-npm install
-gulp generic
-popd
-
 # copy needed files from pdf.js
 mkdir -p build/pdf.js
 cp -r pdf.js/build/generic/* build/pdf.js/
