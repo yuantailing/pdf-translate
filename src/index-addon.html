@@ -2,14 +2,15 @@
 	<div>Dictionary</div>
 	<table>
 		<tbody>
-			<tr v-for="(word, index) in dictionary">
+			<tr v-for="([word, translation], index) in dictionary">
 				<td><input style="width: 80px;" type="text" v-model="dictionary[index][0]"/></td>
 				<td><input style="width: 70px;" type="text" v-model="dictionary[index][1]"/></td>
-				<td><button style="width: 25px;" @click="removeAWord(dictionary[index][0])">x</button></td>
+				<td><button v-if="word.trim().length > 1" style="cursor: pointer;" @click="refreshWord(word)">🔄</button></td>
+				<td><button style="width: 20px;" @click="removeWord(word)">x</button></td>
 			</tr>
 		</tbody>
 	</table>
-	<button style="width: 35px;" @click="addAWord('')">+</button>
+	<button style="width: 35px;" @click="addWord('')">+</button>
 </div>
 <script src="static/js/jquery.js"></script>
 <script src="static/js/jquery.md5.js"></script>
@@ -45,20 +46,87 @@ var app = new Vue({
 		words: function () {
 			return this.dictionary.map(t => t[0]);
 		},
+		trimwords: function () {
+			return this.dictionary.map(t => t[0].trim());
+		},
 	},
 	methods: {
-		addAWord: function (word) {
+		addWord: function (word) {
 			word = word.trim();
+			if (-1 != this.trimwords.indexOf(word))
+				return;
 			for (var i = this.dictionary.length - 1; i >= 0; i--)
 				if (this.dictionary[i][0] || this.dictionary[i][1])
 					break;
 			this.dictionary.splice(i + 1, 0, [word, word]);
-			if (word.length > 1 && word.length < 25) {
-				var self = this;
+			this.queryDictionary(word);
+		},
+		removeWord: function (word) {
+			this.dictionary.splice(this.words.indexOf(word), 1);
+		},
+		refreshWord: function (word) {
+			var ind = this.words.indexOf(word);
+			if (ind >= 0) {
+				Vue.set(this.dictionary[ind], 1, word);
+				setTimeout(() => this.queryDictionary(word), 100);
+			}
+		},
+		getAllWords: function (line) {
+			var lineLower = line.toLowerCase();
+			var words = [];
+			var pos = 0;
+			while (pos >= 0) {
+				var minpos = -1;
+				var minword;
+				var mintrans;
+				this.dictionary.forEach(([word, translated]) => {
+					word = word.trim();
+					if (0 == translated.length)
+						translated = word;
+					var shortword = word;
+					if (shortword.endsWith('s'))
+						shortword = shortword.slice(0, shortword.length - 1);
+					else if (shortword.endsWith('es'))
+						shortword = shortword.slice(0, shortword.length - 2);
+					if (shortword.length <= 1)
+						return;
+					var thispos = lineLower.indexOf(shortword.toLowerCase(), pos);
+					if (thispos >= 0 && (minpos == -1 || thispos < minpos)) {
+						if (thispos == 0 || -1 != seperators.indexOf(lineLower[thispos - 1])) {
+							var matched_length = -1;
+							if (thispos + shortword.length == lineLower.length || -1 != seperators.indexOf(lineLower[thispos + shortword.length]))
+								matched_length = shortword.length;
+							if (thispos + shortword.length + 1 <= lineLower.length && lineLower.slice(thispos + shortword.length, thispos + shortword.length + 1) == 's' && (thispos + shortword.length + 1 == lineLower.length || -1 != seperators.indexOf(lineLower[thispos + shortword.length + 1])))
+								matched_length = shortword.length + 1;
+							if (thispos + shortword.length + 2 <= lineLower.length && lineLower.slice(thispos + shortword.length, thispos + shortword.length + 2) == 'es' && (thispos + shortword.length + 2 == lineLower.length || -1 != seperators.indexOf(lineLower[thispos + shortword.length + 2])))
+								matched_length = shortword.length + 1;
+							if (matched_length > 0) {
+								minpos = thispos;
+								minword = line.slice(thispos, thispos + matched_length);
+								mintrans = translated;
+							}
+						}
+					}
+				});
+				if (minpos >= 0) {
+					words.push({
+						pos: minpos,
+						word: minword,
+						translated: mintrans,
+					});
+					pos = minpos + minword.length;
+				} else {
+					pos = -1;
+				}
+			}
+			return words;
+		},
+		queryDictionary: function (word) {
+			var query = word.trim();
+			if (query.length > 1 && query.length < 25) {
 				var appKey = '65eccc07a70b3f1f';
 				var key = 'KQXhVNw0S39r3EIqAjdKA9XDsbHknyhA';
 				var salt = (new Date).getTime();
-				var query = word;
 				var from = '';
 				var to = 'zh-CHS';
 				var str1 = appKey + query + salt +key;
@@ -77,55 +145,14 @@ var app = new Vue({
 					},
 					success: data => {
 						var translation = data.translation[0];
-						console.log(word, translation);
-						var ind = self.words.indexOf(word);
-						console.log(ind);
+						console.log(query, translation);
+						var ind = this.words.indexOf(word);
 						if (ind >= 0 && translation.length > 0) {
-							Vue.set(self.dictionary[ind], 1, translation);
-							console.log(self.dictionary);
+							Vue.set(this.dictionary[ind], 1, translation);
 						}
 					},
 				});
 			}
-		},
-		removeAWord: function (word) {
-			this.dictionary.splice(this.words.indexOf(word), 1);
-		},
-		getAllWords: function (line) {
-			var lineLower = line.toLowerCase();
-			var words = [];
-			var pos = 0;
-			while (pos >= 0) {
-				var minpos = -1;
-				var minword;
-				var mintrans;
-				this.dictionary.forEach(([word, translated]) => {
-					if (0 == translated.length)
-						translated = word;
-					var thispos = lineLower.indexOf(word.toLowerCase(), pos);
-					if (word.length <= 1)
-						return;
-					if (thispos >= 0 && (minpos == -1 || thispos < minpos)) {
-						if ((thispos == 0 || -1 != seperators.indexOf(line[thispos - 1])) &&
-							(thispos + word.length == line.length || -1 != seperators.indexOf(line[thispos + word.length]))) {
-							minpos = thispos;
-							minword = line.slice(thispos, thispos + word.length);
-							mintrans = translated;
-						}
-					}
-				});
-				if (minpos >= 0) {
-					words.push({
-						pos: minpos,
-						word: minword,
-						translated: mintrans,
-					});
-					pos = minpos + minword.length;
-				} else {
-					pos = -1;
-				}
-			}
-			return words;
 		}
 	},
 	watch: {
@@ -139,7 +166,7 @@ var app = new Vue({
 	},
 });
 
-$('#viewerContainer').keypress(function(e) {
+$('#viewerContainer').keypress(function (e) {
 	var eCode = e.keyCode ? e.keyCode : e.which ? e.which : e.charCode;
 	if (eCode == 13) {
 		translateSelection();
@@ -162,9 +189,7 @@ function translateSelection() {
 	while (hi < rng.startContainer.data.length && -1 == seperators.indexOf(rng.startContainer.data[hi]))
 		hi++;
 	var word = rng.startContainer.data.slice(lo, hi);
-	if (-1 == app.words.indexOf(word)) {
-		app.addAWord(word);
-	}
+	app.addWord(word);
 }
 
 function translateRefreshAll() {
@@ -180,7 +205,7 @@ function translateTextLayer(textLayer) {
 	} else {
 		$(transLayer).empty();
 	}
-	$(textLayer).children().each(function(_, divSrc) {
+	$(textLayer).children().each((_, divSrc) => {
 		var textSrc = divSrc.textContent;
 		var toHide = [];
 		app.getAllWords(textSrc).forEach(({pos, word, translated}) => {
@@ -194,6 +219,7 @@ function translateTextLayer(textLayer) {
 			span3.style.position = 'absolute';
 			span3.style.color = 'transparent';
 			span3.style['background-color'] = 'white';
+			span3.style['opacity'] = '0.9';
 			span3.textContent = word;
 			span4.style.position = 'absolute';
 			span4.textContent = translated;
@@ -205,9 +231,9 @@ function translateTextLayer(textLayer) {
 			toHide.push(divDst);
 		});
 		if (toHide) {
-			$(divSrc).hover(function() {
+			$(divSrc).hover(() => {
 				toHide.forEach(divDst => divDst.style.display = 'none');
-			}, function() {
+			}, () => {
 				toHide.forEach(divDst => divDst.style.display = 'block');
 			});
 		}
@@ -241,16 +267,17 @@ function translateTextLayer(textLayer) {
 	position: absolute;
 	top: 50px;
 	left: 10px;
-	padding: 3px;
+	padding: 3px 3px 13px 3px;
 	max-height: 60px;
-	overflow-y: auto;
+	overflow-y: hidden;
 	font-size: 80%;
 	background-color: #eee;
 	# opacity: 0.5;
 }
 
-#app:hover {
+#app:hover, #app:focus-within {
 	max-height: 80%;
+	overflow-y: auto;
 	opacity: 1.0;
 }
 
