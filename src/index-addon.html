@@ -184,15 +184,20 @@ function translateSelection() {
 	var rng = sel.getRangeAt(0);
 	if (rng.startContainer != rng.endContainer && rng.startContainer.parentNode.nextSibling != rng.endContainer.parentNode)
 		return;
+	var startContainer = rng.startContainer;
 	var lo = rng.startOffset;
-	while (lo > 0 && -1 == seperators.indexOf(rng.startContainer.data[lo]) && -1 == seperators.indexOf(rng.startContainer.data[lo - 1]))
+	if (rng.startContainer.length == rng.startOffset && rng.startContainer.parentNode.nextSibling == rng.endContainer.parentNode) {
+		startContainer = rng.endContainer;
+		lo = 0;
+	}
+	while (lo > 0 && -1 == seperators.indexOf(startContainer.data[lo]) && -1 == seperators.indexOf(startContainer.data[lo - 1]))
 		lo--;
-	while (lo < rng.startContainer.data.length - 1 && -1 != seperators.indexOf(rng.startContainer.data[lo]))
+	while (lo < startContainer.data.length - 1 && -1 != seperators.indexOf(startContainer.data[lo]))
 		lo++;
 	var hi = lo + 1;
-	while (hi < rng.startContainer.data.length && -1 == seperators.indexOf(rng.startContainer.data[hi]))
+	while (hi < startContainer.data.length && -1 == seperators.indexOf(startContainer.data[hi]))
 		hi++;
-	var word = rng.startContainer.data.slice(lo, hi);
+	var word = startContainer.data.slice(lo, hi);
 	app.addWord(word);
 }
 
