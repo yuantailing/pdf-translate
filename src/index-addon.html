@@ -1,4 +1,5 @@
 <div id="app">
+	<button style="width: 30px;" @click="addSelectedWord(true)">+</button>
 	<table>
 		<tbody>
 			<tr v-for="([word, translation], index) in dictionary">
@@ -10,7 +11,6 @@
 			</tr>
 		</tbody>
 	</table>
-	<button style="width: 35px; margin-bottom: 3px;" @click="addWord('')">+</button>
 	<p>Powered by <a href="http://translate.yandex.com/" target="_blank">Yandex.Translate</a></p>
 </div>
 <script src="static/js/jquery.js"></script>
@@ -52,15 +52,16 @@ var app = new Vue({
 		},
 	},
 	methods: {
-		addWord: function (word) {
-			word = word.trim();
-			if (word != '' && -1 != this.trimwords.indexOf(word))
-				return;
-			for (var i = this.dictionary.length - 1; i >= 0; i--)
-				if (this.dictionary[i][0] || this.dictionary[i][1])
-					break;
-			this.dictionary.splice(i + 1, 0, [word, word]);
+		addWord: function (word) {  // 返回词典是否变化
+			if (!word || word != word.trim()) {
+				console.error('illegal word ' + JSON.stringify(word));
+				return false;
+			}
+			if (-1 != this.trimwords.indexOf(word))
+				return false;
+			this.dictionary.splice(0, 0, [word, word]);
 			this.queryDictionary(word);
+			return true;
 		},
 		removeWord: function (word) {
 			this.dictionary.splice(this.words.indexOf(word), 1);
@@ -156,6 +157,26 @@ var app = new Vue({
 		getDictLink: (word) => {
 			return 'http://dict.youdao.com/w/' + word.trim();
 		},
+		addSelectedWord: function (isForce) {
+			var newWord = getSelectedWord();
+			if (newWord) {
+				if (this.addWord(newWord)) {
+					var firstBlank = -1;
+					for (var i = 0; i < this.dictionary.length; i++) {
+						if (!this.dictionary[i][0].trim()) {
+							firstBlank = i;
+							break;
+						}
+					}
+					if (firstBlank >= 0)
+						this.dictionary.splice(firstBlank, 1);
+				} else if (isForce) {
+					this.dictionary.splice(0, 0, ['', '']);
+				}
+			} else if (isForce) {
+				this.dictionary.splice(0, 0, ['', '']);
+			}
+		},
 	},
 	watch: {
 		dictionary: function () {
@@ -171,23 +192,27 @@ var app = new Vue({
 $('#viewerContainer').keypress(function (e) {
 	var eCode = e.keyCode ? e.keyCode : e.which ? e.which : e.charCode;
 	if (eCode == 13) {
-		translateSelection();
+		app.addSelectedWord();
 	}
 });
 
-function translateSelection() {
+function getSelectedWord() {
 	var sel = window.getSelection();
 	if (sel.rangeCount == 0)
-		return;
+		return '';
 	var rng = sel.getRangeAt(0);
+	if (rng.startContainer == rng.endContainer && rng.startOffset == rng.endOffset)
+		return '';
 	if (rng.startContainer != rng.endContainer && rng.startContainer.parentNode.nextSibling != rng.endContainer.parentNode)
-		return;
+		return '';
 	var startContainer = rng.startContainer;
 	var lo = rng.startOffset;
 	if (rng.startContainer.length == rng.startOffset && rng.startContainer.parentNode.nextSibling == rng.endContainer.parentNode) {
 		startContainer = rng.endContainer;
 		lo = 0;
 	}
+	if (undefined === startContainer.data)
+		return '';
 	while (lo > 0 && -1 == seperators.indexOf(startContainer.data[lo]) && -1 == seperators.indexOf(startContainer.data[lo - 1]))
 		lo--;
 	while (lo < startContainer.data.length - 1 && -1 != seperators.indexOf(startContainer.data[lo]))
@@ -196,7 +221,7 @@ function translateSelection() {
 	while (hi < startContainer.data.length && -1 == seperators.indexOf(startContainer.data[hi]))
 		hi++;
 	var word = startContainer.data.slice(lo, hi);
-	app.addWord(word);
+	return word;
 }
 
 function translateRefreshAll() {
@@ -286,7 +311,7 @@ $('#mainContainer').on('dragover', function (evt) {
 	top: 40px;
 	left: 0;
 	padding: 3px;
-	max-height: 60px;
+	max-height: 70px;
 	overflow-y: hidden;
 	font-size: 80%;
 	background-color: #eee;
