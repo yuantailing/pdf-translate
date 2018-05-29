@@ -76,11 +76,15 @@ var app = new Vue({
 			var lineLower = line.toLowerCase();
 			var words = [];
 			var pos = 0;
+			var sortedWords = [];
+			this.words.forEach(word => sortedWords.push(word));
+			sortedWords.sort((a, b) => b.trim().length - a.trim().length);
 			while (pos >= 0) {
 				var minpos = -1;
 				var minword;
 				var mintrans;
-				this.dictionary.forEach(([word, translated]) => {
+				sortedWords.forEach(word => {
+					var translated = this.dictionary[this.words.indexOf(word)][1];
 					word = word.trim();
 					if (0 == translated.length)
 						translated = word;
