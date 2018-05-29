@@ -5,6 +5,8 @@ from __future__ import division
 from __future__ import print_function
 from __future__ import unicode_literals
 
+import os
+
 from six.moves import urllib
 
 
@@ -17,8 +19,19 @@ def main():
         bin_new = '"{:s}"'.format(url_new).encode()
         assert content.count(bin_old) <= 1
         content = content.replace(bin_old, bin_new)
+
     with open('src/index-addon.html', 'rb') as f:
         addon = f.read()
+    if os.environ.get('PRODUCTION') == '1':
+        for url_old, url_new in (
+            ('static/js/jquery.js', 'static/js/jquery.min.js'),
+            ('static/js/vue.js', 'static/js/vue.min.js'),
+        ):
+            bin_old = '"{:s}"'.format(url_old).encode()
+            bin_new = '"{:s}"'.format(url_new).encode()
+            assert addon.count(bin_old) <= 1
+            addon = addon.replace(bin_old, bin_new)
+
     insertBeforeLine = br'</body>'
     content = content.replace(insertBeforeLine, addon + insertBeforeLine)
     with open('build/index.html', 'wb') as f:
