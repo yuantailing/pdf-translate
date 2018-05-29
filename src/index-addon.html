@@ -1,5 +1,8 @@
 <div id="app">
-	<button style="width: 30px;" @click="addSelectedWord(true)">+</button>
+	<p>
+		<button style="width: 30px;" @click="addSelectedWord(true)">+</button>
+		<!--button style="width: 35px;" @click="translateSelectedSentence(true)">句子</button-->
+	</p>
 	<table>
 		<tbody>
 			<tr v-for="([word, translation], index) in dictionary">
@@ -12,6 +15,27 @@
 		</tbody>
 	</table>
 	<p>Powered by <a href="http://translate.yandex.com/" target="_blank">Yandex.Translate</a></p>
+</div>
+<div id="sentence-wrap">
+	<div>
+		<button style="float: right; width: 30px;" onclick="$('#sentence-wrap').hide()">x</button>
+		<div style="clear: both;"></div>
+	</div>
+	<div style="margin-top: 10px;">
+		<div>en</div>
+		<textarea style="width: 100%;" rows="5" v-model="src"></textarea>
+	</div>
+	<div style="margin-top: 10px;">
+		<div>zh</div>
+		<textarea style="width: 100%;" rows="5" v-model="dst"></textarea>
+	</div>
+	<div style="margin-top: 10px;">
+		<p style="float: left; font-size: 80%;">Powered by <a href="http://translate.yandex.com/" target="_blank">Yandex.Translate</a></p>
+		<button style="float: right;" @click="reTranslateButtonClicked">&nbsp;重新翻译&nbsp;</button>
+		<span style="float: right; width: 5px;">&nbsp;</span>
+		<a style="float: right;" :href="getSentenceLink()" target="_blank">链接</a>
+		<div style="clear: both; padding-bottom: 10px;"></div>
+	</div>
 </div>
 <script src="static/js/jquery.js"></script>
 <script src="static/js/jquery.md5.js"></script>
@@ -53,10 +77,8 @@ var app = new Vue({
 	},
 	methods: {
 		addWord: function (word) {  // 返回词典是否变化
-			if (!word || word != word.trim()) {
-				console.error('illegal word ' + JSON.stringify(word));
-				return false;
-			}
+			if (!word || word != word.trim())
+				throw 'illegal word ' + JSON.stringify(word);
 			if (-1 != this.trimwords.indexOf(word))
 				return false;
 			this.dictionary.splice(0, 0, [word, word]);
@@ -130,27 +152,11 @@ var app = new Vue({
 		queryDictionary: function (word) {
 			var query = word.trim();
 			if (query.length > 1 && query.length < 25) {
-				var apiKey = 'trnsl.1.1.20180529T082724Z.57e3ccb5b9a4596f.02a1106f00987989f3f46805db64b2cadbdcf92d';
-				var lang = 'zh';
-				$.ajax({
-					url: 'https://translate.yandex.net/api/v1.5/tr.json/translate',
-					type: 'post',
-					dataType: 'jsonp',
-					data: {
-						key: apiKey,
-						text: query,
-						lang: lang,
-					},
-					success: data => {
-						if (data.code == 200) {
-							var translation = data.text[0];
-							console.log(query, translation);
-							var ind = this.words.indexOf(word);
-							if (ind >= 0 && translation.length > 0) {
-								Vue.set(this.dictionary[ind], 1, translation);
-							}
-						}
-					},
+				translateAPI(query).then(translation => {
+					var ind = this.words.indexOf(word);
+					if (ind >= 0 && translation.length > 0) {
+						Vue.set(this.dictionary[ind], 1, translation);
+					}
 				});
 			}
 		},
@@ -177,6 +183,30 @@ var app = new Vue({
 				this.dictionary.splice(0, 0, ['', '']);
 			}
 		},
+		translateSelectedSentence: function (isForce) {  // 返回 bool：是否选了一个合理的句子，即是否调用了翻译句子的 Web API。
+			var sel = window.getSelection();
+			if (sel.rangeCount == 0)
+				return false;
+			var rng = sel.getRangeAt(0);
+			var startOffset = rng.startOffset;
+			while (startOffset > 0 && rng.startContainer.data[startOffset] != ' ' && rng.startContainer.data[startOffset - 1] != ' ')
+				startOffset--;
+			rng.setStart(rng.startContainer, startOffset);
+			var endOffset = rng.endOffset;
+			while (endOffset < rng.endContainer.data.length && rng.endContainer.data[endOffset - 1] != ' ' && rng.endContainer.data[endOffset] != ' ')
+				endOffset++;
+			rng.setEnd(rng.endContainer, endOffset);
+			var sentence = rng.toString();
+			var wordNum = sentence.split(' ').length;
+			if (isForce || wordNum >= 4) {
+				return false;
+				// appSentence.src = rng.toString();
+				// appSentence.show();
+				// appSentence.doTranslate();
+				// return true;
+			}
+			return false;
+		}
 	},
 	watch: {
 		dictionary: function () {
@@ -189,10 +219,62 @@ var app = new Vue({
 	},
 });
 
+var appSentence = new Vue({
+	el: '#sentence-wrap',
+	data: {
+		src: '',
+		dst: '',
+	},
+	methods: {
+		getSentenceLink: function() {
+			return 'https://translate.google.cn/#auto/zh-CN/' + this.src;
+		},
+		doTranslate: function() {
+			if (this.src.length < 500) {
+				this.dst = this.src;
+				translateAPI(this.src).then(translation => this.dst = translation);
+			} else {
+				this.dst = '<字数过多>';
+			}
+		},
+		reTranslateButtonClicked: function() {
+			setTimeout(() => this.doTranslate(), 50);
+		},
+		close: function() {
+			$(this.$el).hide();
+		},
+		show: function() {
+			$(this.$el).show();
+		},
+	},
+});
+
+function translateAPI(text) {
+	var apiKey = 'trnsl.1.1.20180529T082724Z.57e3ccb5b9a4596f.02a1106f00987989f3f46805db64b2cadbdcf92d';
+	var lang = 'zh';
+	return $.ajax({
+		url: 'https://translate.yandex.net/api/v1.5/tr.json/translate',
+		type: 'POST',
+		dataType: 'json',
+		data: {
+			key: apiKey,
+			text: text,
+			lang: lang,
+		},
+	}).then(function(data) {
+		if (200 != data.code)
+			throw 'bad API call, code = ' + data.code;
+		var translation = data.text[0];
+		console.log(text, translation);
+		return translation;
+	});
+}
+
 $('#viewerContainer').keypress(function (e) {
 	var eCode = e.keyCode ? e.keyCode : e.which ? e.which : e.charCode;
 	if (eCode == 13) {
-		app.addSelectedWord();
+		if (!app.translateSelectedSentence())
+			app.addSelectedWord();
 	}
 });
 
@@ -272,7 +354,7 @@ function translateTextLayer(textLayer) {
 	});
 }
 
-$('#mainContainer').on('dragover', function (evt) {
+$('body').on('dragover', function (evt) {
 	evt.preventDefault();
 }).on('drop', function (evt) {
 	var files = evt.originalEvent.dataTransfer.files;
@@ -326,5 +408,19 @@ $('#mainContainer').on('dragover', function (evt) {
 
 #app input, #app button {
 	font-size: 80%;
+}
+
+#sentence-wrap {
+	position: absolute;
+	left: 50%;
+	top: 60px;
+	width: 500px;
+    transform: translate(-50%, 0);
+	padding: 10px;
+	border: 1px solid #ccc;
+	border-radius: 6px;
+	box-shadow: 8px 8px 10px rgba(0, 20, 80, 0.1);
+	background-color: #eee;
+	display: none;
 }
 </style>
