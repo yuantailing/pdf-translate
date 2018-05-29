@@ -20,6 +20,12 @@ def main():
         assert content.count(bin_old) <= 1
         content = content.replace(bin_old, bin_new)
 
+    with open('src/index-head-addon.html', 'rb') as f:
+        addon = f.read()
+    insertBeforeLine = br'</head>'
+    assert 1 == content.count(insertBeforeLine)
+    content = content.replace(insertBeforeLine, addon + insertBeforeLine)
+
     with open('src/index-addon.html', 'rb') as f:
         addon = f.read()
     if os.environ.get('PRODUCTION') == '1':
@@ -33,6 +39,7 @@ def main():
             addon = addon.replace(bin_old, bin_new)
 
     insertBeforeLine = br'</body>'
+    assert 1 == content.count(insertBeforeLine)
     content = content.replace(insertBeforeLine, addon + insertBeforeLine)
     with open('build/index.html', 'wb') as f:
         f.write(content)

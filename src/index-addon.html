@@ -1,5 +1,4 @@
 <div id="app">
-	<div>Dictionary</div>
 	<table>
 		<tbody>
 			<tr v-for="([word, translation], index) in dictionary">
@@ -11,7 +10,8 @@
 			</tr>
 		</tbody>
 	</table>
-	<button style="width: 35px;" @click="addWord('')">+</button>
+	<button style="width: 35px; margin-bottom: 3px;" @click="addWord('')">+</button>
+	<p>Powered by Yandex.Translate</p>
 </div>
 <script src="static/js/jquery.js"></script>
 <script src="static/js/jquery.md5.js"></script>
@@ -54,7 +54,7 @@ var app = new Vue({
 	methods: {
 		addWord: function (word) {
 			word = word.trim();
-			if (-1 != this.trimwords.indexOf(word))
+			if (word != '' && -1 != this.trimwords.indexOf(word))
 				return;
 			for (var i = this.dictionary.length - 1; i >= 0; i--)
 				if (this.dictionary[i][0] || this.dictionary[i][1])
@@ -69,7 +69,7 @@ var app = new Vue({
 			var ind = this.words.indexOf(word);
 			if (ind >= 0) {
 				Vue.set(this.dictionary[ind], 1, word);
-				setTimeout(() => this.queryDictionary(word), 100);
+				setTimeout(() => this.queryDictionary(word), 50);
 			}
 		},
 		getAllWords: function (line) {
@@ -125,31 +125,25 @@ var app = new Vue({
 		queryDictionary: function (word) {
 			var query = word.trim();
 			if (query.length > 1 && query.length < 25) {
-				var appKey = '65eccc07a70b3f1f';
-				var key = 'KQXhVNw0S39r3EIqAjdKA9XDsbHknyhA';
-				var salt = (new Date).getTime();
-				var from = '';
-				var to = 'zh-CHS';
-				var str1 = appKey + query + salt +key;
-				var sign = $.md5(str1);
+				var apiKey = 'trnsl.1.1.20180529T082724Z.57e3ccb5b9a4596f.02a1106f00987989f3f46805db64b2cadbdcf92d';
+				var lang = 'zh';
 				$.ajax({
-					url: '//openapi.youdao.com/api',
+					url: 'https://translate.yandex.net/api/v1.5/tr.json/translate',
 					type: 'post',
 					dataType: 'jsonp',
 					data: {
-						q: query,
-						appKey: appKey,
-						salt: salt,
-						from: from,
-						to: to,
-						sign: sign,
+						key: apiKey,
+						text: query,
+						lang: lang,
 					},
 					success: data => {
-						var translation = data.translation[0];
-						console.log(query, translation);
-						var ind = this.words.indexOf(word);
-						if (ind >= 0 && translation.length > 0) {
-							Vue.set(this.dictionary[ind], 1, translation);
+						if (data.code == 200) {
+							var translation = data.text[0];
+							console.log(query, translation);
+							var ind = this.words.indexOf(word);
+							if (ind >= 0 && translation.length > 0) {
+								Vue.set(this.dictionary[ind], 1, translation);
+							}
 						}
 					},
 				});
@@ -276,7 +270,7 @@ function translateTextLayer(textLayer) {
 	position: absolute;
 	top: 40px;
 	left: 0;
-	padding: 3px 3px 13px 3px;
+	padding: 3px;
 	max-height: 60px;
 	overflow-y: hidden;
 	font-size: 80%;
