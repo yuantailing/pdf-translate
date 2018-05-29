@@ -11,7 +11,7 @@
 		</tbody>
 	</table>
 	<button style="width: 35px; margin-bottom: 3px;" @click="addWord('')">+</button>
-	<p>Powered by Yandex.Translate</p>
+	<p>Powered by <a href="http://translate.yandex.com/" target="_blank">Yandex.Translate</a></p>
 </div>
 <script src="static/js/jquery.js"></script>
 <script src="static/js/jquery.md5.js"></script>
@@ -247,7 +247,18 @@ function translateTextLayer(textLayer) {
 	});
 }
 
-// TODO: 监听 drop
+$('#mainContainer').on('dragover', function (evt) {
+	evt.preventDefault();
+}).on('drop', function (evt) {
+	var files = evt.originalEvent.dataTransfer.files;
+	if (!files || files.length === 0) {
+		return;
+	}
+	evt.preventDefault();
+	PDFViewerApplication.eventBus.dispatch('fileinputchange', {
+		fileInput: evt.originalEvent.dataTransfer,
+	});
+});
 </script>
 <style>
 .transLayer {
