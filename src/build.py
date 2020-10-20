@@ -30,6 +30,7 @@ def main():
         addon = f.read()
     if os.environ.get('PRODUCTION') == '1':
         for url_old, url_new in (
+            ('static/js/crypto-js.js', 'static/js/crypto-js.min.js'),
             ('static/js/jquery.js', 'static/js/jquery.min.js'),
             ('static/js/vue.js', 'static/js/vue.min.js'),
         ):

@@ -16,13 +16,15 @@ cp -r www/* build/
 mkdir -p build/static/js
 pushd . && cd build/static/js
 if [[ $PRODUCTION = 1 ]]; then
+  curl -sSL https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.0.0/crypto-js.min.js -o crypto-js.min.js
   curl -sSL https://unpkg.com/jquery/dist/jquery.min.js -ojquery.min.js
   curl -sSL https://unpkg.com/jquery.md5/index.js -ojquery.md5.js
-  curl -sSL https://unpkg.com/vue/dist/vue.min.js -ovue.min.js;
+  curl -sSL https://unpkg.com/vue/dist/vue.min.js -ovue.min.js
 else
+  curl -sSL https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.0.0/crypto-js.js -o crypto-js.js
   curl -sSL https://unpkg.com/jquery/dist/jquery.js -ojquery.js
   curl -sSL https://unpkg.com/jquery.md5/index.js -ojquery.md5.js
-  curl -sSL https://unpkg.com/vue/dist/vue.js -ovue.js;
+  curl -sSL https://unpkg.com/vue/dist/vue.js -ovue.js
 fi
 popd
 

@@ -14,7 +14,6 @@
 			</tr>
 		</tbody>
 	</table>
-	<p>Powered by <a href="http://translate.yandex.com/" target="_blank">Yandex.Translate</a></p>
 </div>
 <div id="sentence-wrap">
 	<div>
@@ -30,13 +29,13 @@
 		<textarea style="width: 100%;" rows="5" v-model="dst"></textarea>
 	</div>
 	<div style="margin-top: 10px;">
-		<p style="float: left; font-size: 80%;">Powered by <a href="http://translate.yandex.com/" target="_blank">Yandex.Translate</a></p>
 		<button style="float: right;" @click="reTranslateButtonClicked">&nbsp;重新翻译&nbsp;</button>
 		<span style="float: right; width: 5px;">&nbsp;</span>
 		<a style="float: right;" :href="getSentenceLink()" target="_blank">链接</a>
 		<div style="clear: both; padding-bottom: 10px;"></div>
 	</div>
 </div>
+<script src="static/js/crypto-js.js"></script>
 <script src="static/js/jquery.js"></script>
 <script src="static/js/jquery.md5.js"></script>
 <script src="static/js/vue.js"></script>
@@ -250,21 +249,33 @@ var appSentence = new Vue({
 });
 
 function translateAPI(text) {
-	var apiKey = 'trnsl.1.1.20180529T082724Z.57e3ccb5b9a4596f.02a1106f00987989f3f46805db64b2cadbdcf92d';
-	var lang = 'zh';
+	var appKey = '65eccc07a70b3f1f';
+	var key = '4GHj6MjMdkwXhP1hBlXWkYVUhF8jBeSy';
+	var salt = (new Date).getTime();
+	var curtime = Math.round(new Date().getTime() / 1000);
+	var query = text;
+	var from = 'en';
+	var to = 'zh-CHS';
+	var str1 = appKey + query + salt + curtime + key;
+	var sign = CryptoJS.SHA256(str1).toString(CryptoJS.enc.Hex);
 	return $.ajax({
-		url: 'https://translate.yandex.net/api/v1.5/tr.json/translate',
-		type: 'POST',
-		dataType: 'json',
+		url: '//openapi.youdao.com/api',
+		type: 'post',
+		dataType: 'jsonp',
 		data: {
-			key: apiKey,
-			text: text,
-			lang: lang,
-		},
+			q: query,
+			appKey: appKey,
+			salt: salt,
+			from: from,
+			to: to,
+			sign: sign,
+			signType: "v3",
+			curtime: curtime,
+		}
 	}).then(function(data) {
-		if (200 != data.code)
+		if ('0' != data.errorCode)
 			throw 'bad API call, code = ' + data.code;
-		var translation = data.text[0];
+		var translation = data.translation[0];
 		console.log(text, translation);
 		return translation;
 	});
@@ -379,7 +390,7 @@ $('body').on('dragover', function (evt) {
     line-height: 1.0;
 }
 
-.transLayer > div {
+.transLayer > span {
 	# color: transparent;
 	position: absolute;
 	white-space: pre;
